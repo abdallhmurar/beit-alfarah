@@ -1,34 +1,193 @@
 "use client";
-import {useEffect,useMemo,useRef,useState}from"react";
-import gsap from"gsap";
-import{Armchair,CalendarDays,Camera,ChevronLeft,CircleUserRound,Crown,Download,LayoutDashboard,LayoutGrid,MapPin,Menu,PackagePlus,PartyPopper,Phone,Plus,Search,Sparkles,TableProperties,TentTree,Trash2,Users,X}from"lucide-react";
-import{Button}from"@/components/ui/button";import{Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle}from"@/components/ui/dialog";import{Sheet,SheetContent,SheetHeader,SheetTitle}from"@/components/ui/sheet";import{Input}from"@/components/ui/input";import{Label}from"@/components/ui/label";import{Textarea}from"@/components/ui/textarea";import{Toaster}from"@/components/ui/sonner";import{toast}from"sonner";
-type Ev={id:number;eventType:string;customerName:string;phone1:string;phone2:string;area:string;eventDate:string;notes:string};type Cat={id:number;name:string;icon:string};type Item={id:number;categoryId:number;name:string;description:string;price:number|null;imageKey:string;imageUrl?:string;isPremium:boolean};type Sel={id:number;eventId:number;itemId:number;quantity:number};
-const samplesC:Cat[]=[{id:-1,name:"الكراسي",icon:"chair"},{id:-2,name:"الطاولات",icon:"table"},{id:-3,name:"لوج العرسان",icon:"arch"},{id:-4,name:"الزينة",icon:"sparkles"}];const samplesI:Item[]=[{id:-11,categoryId:-1,name:"كرسي شفاف ملكي",description:"مع وسادة بيضاء وتفاصيل ذهبية",price:18,imageKey:"",isPremium:false},{id:-12,categoryId:-1,name:"كرسي أبيض كلاسيك",description:"مناسب للأعراس والحنّة",price:12,imageKey:"",isPremium:false},{id:-13,categoryId:-1,name:"كرسي العروسين الذهبي",description:"قطعة مميزة لمنصة العرسان",price:220,imageKey:"",isPremium:true}];
+
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import gsap from "gsap";
+import {
+  Armchair, CalendarDays, Camera, Check, ChevronLeft, Crown, Download,
+  LayoutDashboard, LayoutGrid, MapPin, Menu, PackagePlus, PartyPopper,
+  Phone, Plus, Search, Sparkles, TableProperties, TentTree, Trash2, X
+} from "lucide-react";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
+
+type Party = {id:number;eventType:string;customerName:string;phone1:string;phone2:string;area:string;eventDate:string;notes:string};
+type Category = {id:number;name:string;icon:string};
+type Product = {id:number;categoryId:number;name:string;description:string;price:number|null;imageUrl?:string;isPremium:boolean};
+type Pick = {id:number;eventId:number;itemId:number;quantity:number};
+type Modal = "party"|"product"|"category"|null;
+
+const defaultCategories:Category[]=[
+  {id:1,name:"الكراسي",icon:"chair"},{id:2,name:"الطاولات",icon:"table"},
+  {id:3,name:"كوشة العرسان",icon:"arch"},{id:4,name:"الديكور",icon:"sparkles"}
+];
+const defaultProducts:Product[]=[
+  {id:11,categoryId:1,name:"كرسي Ghost",description:"شفاف، عصري، ومثالي للأعراس",price:18,isPremium:false},
+  {id:12,categoryId:1,name:"كرسي Chiavari",description:"أبيض كلاسيكي بوسادة مريحة",price:14,isPremium:false},
+  {id:13,categoryId:1,name:"Throne Duo",description:"طقم فاخر خاص بمنصة العرسان",price:240,isPremium:true}
+];
+
 export default function Home(){
-const root=useRef<HTMLElement>(null);
-const[events,setEvents]=useState<Ev[]>([]),[cats,setCats]=useState<Cat[]>(samplesC),[items,setItems]=useState<Item[]>(samplesI),[selections,setSelections]=useState<Sel[]>([]);const[cat,setCat]=useState(-1),[active,setActive]=useState<Ev|null>(null),[eventOpen,setEventOpen]=useState(false),[itemOpen,setItemOpen]=useState(false),[catOpen,setCatOpen]=useState(false),[summaryOpen,setSummaryOpen]=useState(false),[search,setSearch]=useState(""),[ready,setReady]=useState(false);const[eventForm,setEventForm]=useState({eventType:"عرس",customerName:"",phone1:"",phone2:"",area:"",eventDate:"",notes:""}),[itemForm,setItemForm]=useState({name:"",description:"",price:"",isPremium:false}),[file,setFile]=useState<File|null>(null),[catName,setCatName]=useState("");
-useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("beit-alfarah-data")||"{}");if(d.events)setEvents(d.events);if(d.categories?.length){setCats(d.categories);setCat(d.categories[0].id)}if(d.items?.length)setItems(d.items);if(d.selections)setSelections(d.selections)}catch{}setReady(true)},[]);useEffect(()=>{if(ready)localStorage.setItem("beit-alfarah-data",JSON.stringify({events,categories:cats,items,selections}))},[ready,events,cats,items,selections]);useEffect(()=>{if(!root.current)return;const ctx=gsap.context(()=>{gsap.from("header",{y:-24,opacity:0,duration:.8,ease:"power3.out"});gsap.from("main>div>aside, main>div>section",{y:28,opacity:0,duration:.8,stagger:.12,ease:"power3.out"});gsap.from("article",{y:20,opacity:0,duration:.55,stagger:.07,ease:"power2.out",delay:.35})},root);return()=>ctx.revert()},[]);
-const activeSel=useMemo(()=>active?selections.filter(s=>s.eventId===active.id):[],[active,selections]),selectedItems=useMemo(()=>activeSel.map(s=>({selection:s,item:items.find(i=>i.id===s.itemId)})).filter(x=>x.item)as{selection:Sel;item:Item}[],[activeSel,items]),total=selectedItems.reduce((n,x)=>n+(x.item.price||0)*x.selection.quantity,0);const visible=items.filter(i=>i.categoryId===cat&&i.name.includes(search)),regular=visible.filter(i=>!i.isPremium),premium=visible.filter(i=>i.isPremium);
-function saveEvent(e:React.FormEvent){e.preventDefault();const event={...eventForm,id:Date.now()};setEvents(v=>[event,...v]);setActive(event);setEventOpen(false);toast.success("تم فتح كرت الحفلة")}
-function saveCat(e:React.FormEvent){e.preventDefault();if(!catName.trim())return;const category={id:Date.now(),name:catName.trim(),icon:"sparkles"};setCats(v=>[...v,category]);setCat(category.id);setCatName("");setCatOpen(false)}
-async function saveItem(e:React.FormEvent){e.preventDefault();let imageUrl="";if(file)imageUrl=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||""));reader.onerror=reject;reader.readAsDataURL(file)});const item:Item={id:Date.now(),categoryId:cat,name:itemForm.name.trim(),description:itemForm.description.trim(),price:itemForm.price?Number(itemForm.price):null,imageKey:"",imageUrl,isPremium:itemForm.isPremium};setItems(v=>[item,...v]);setItemOpen(false);setFile(null);setItemForm({name:"",description:"",price:"",isPremium:false});toast.success("تمت إضافة القطعة")}
-function pick(item:Item){if(!active)return toast.info("اختر حفلة من القائمة أو افتح كرتاً جديداً");const old=activeSel.find(s=>s.itemId===item.id);if(old){setSelections(v=>v.filter(s=>s.id!==old.id));return}setSelections(v=>[...v,{id:Date.now(),eventId:active.id,itemId:item.id,quantity:1}]);toast.success("أضيفت إلى ملخص الحفلة")}
-return <main ref={root} className="premium-site min-h-screen bg-[#f4f6f5] text-[#132822]" dir="rtl"><Toaster position="top-center" richColors/>
-<header className="sticky top-0 z-30 border-b bg-white"><div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 lg:px-6"><div className="flex items-center gap-3"><button className="lg:hidden"><Menu/></button><div className="grid size-10 place-items-center rounded-xl bg-[#173d32] text-white"><PartyPopper/></div><div><h1 className="font-black">بيت الفرح</h1><p className="text-xs text-[#78857f]">إدارة الحفلات</p></div></div><Button onClick={()=>setEventOpen(true)} className="rounded-xl bg-[#173d32]"><Plus/>كرت حفلة جديد</Button></div></header>
-<div className="mx-auto grid max-w-[1600px] lg:grid-cols-[190px_minmax(0,1fr)_330px]">
-<aside className="hidden min-h-[calc(100vh-4rem)] border-l bg-[#173d32] p-4 text-white lg:block"><nav className="space-y-2"><Nav active icon={<LayoutDashboard/>} text="لوحة التحكم"/><Nav icon={<CalendarDays/>} text="الحفلات"/><Nav icon={<LayoutGrid/>} text="الكتالوج"/></nav><div className="mt-8 border-t border-white/15 pt-5"><p className="mb-3 text-xs text-white/50">الحفلات الأخيرة</p>{events.slice(0,5).map(e=><button key={e.id} onClick={()=>setActive(e)} className={`mb-2 w-full rounded-xl p-3 text-right text-sm ${active?.id===e.id?"bg-white text-[#173d32]":"bg-white/5 hover:bg-white/10"}`}><b className="block truncate">{e.customerName}</b><small className={active?.id===e.id?"text-[#667a72]":"text-white/55"}>{e.eventType} · {e.area}</small></button>)}</div></aside>
-<section className="min-w-0 p-4 lg:p-6"><div className="mb-5 flex items-end justify-between"><div><p className="text-sm text-[#78857f]">لوحة التحكم</p><h2 className="text-2xl font-black">تجهيزات الحفلة</h2></div><div className="hidden gap-3 sm:flex"><Stat n={events.length} label="حفلات"/><Stat n={items.filter(i=>i.id>0).length} label="قطع"/></div></div>
-<div className="mb-5 flex gap-3 overflow-x-auto hide-scrollbar lg:hidden">{events.map(e=><button key={e.id} onClick={()=>setActive(e)} className={`min-w-[180px] rounded-xl border p-3 text-right ${active?.id===e.id?"border-[#173d32] bg-[#e7efeb]":"bg-white"}`}><b className="block">{e.customerName}</b><small>{e.eventType} · {e.area}</small></button>)}</div>
-<div className="rounded-2xl border bg-white p-4 shadow-sm"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div className="relative min-w-[220px] flex-1"><Search className="absolute right-3 top-3 size-4 text-[#84918b]"/><Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث في الكتالوج" className="pr-9"/></div><div className="flex gap-2"><Button variant="outline" onClick={()=>setCatOpen(true)}><LayoutGrid/>قسم</Button><Button variant="outline" onClick={()=>setItemOpen(true)}><Camera/>قطعة</Button></div></div><div className="mb-5 flex gap-2 overflow-x-auto hide-scrollbar">{cats.map(c=><button key={c.id} onClick={()=>setCat(c.id)} className={`flex min-w-max items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold ${cat===c.id?"bg-[#173d32] text-white":"bg-[#eef2f0]"}`}><CatIcon icon={c.icon}/>{c.name}</button>)}</div><Row title="الكتالوج" items={regular} selected={activeSel.map(s=>s.itemId)} pick={pick}/><div className="mt-6 rounded-2xl border border-[#dfc27d] bg-[#fff9ec] p-4"><h3 className="mb-4 flex items-center gap-2 font-black text-[#765214]"><Crown className="size-5"/>Premium</h3><Row title="" items={premium} selected={activeSel.map(s=>s.itemId)} pick={pick} premium/></div></div></section>
-<aside className="hidden border-r bg-white p-5 lg:block"><Summary active={active} selected={selectedItems} total={total} remove={pick}/></aside></div>
-<button onClick={()=>setSummaryOpen(true)} className="fixed bottom-4 left-4 right-4 z-30 flex items-center justify-between rounded-2xl bg-[#173d32] p-4 text-white shadow-xl lg:hidden"><span><small className="block text-white/60">ملخص الحفلة</small><b>{active?active.customerName:"لم يتم اختيار حفلة"}</b></span><span className="flex items-center gap-2">{selectedItems.length} قطع<ChevronLeft/></span></button>
-<Sheet open={summaryOpen} onOpenChange={setSummaryOpen}><SheetContent side="left" dir="rtl" className="w-[92vw] overflow-y-auto sm:max-w-md"><SheetHeader><SheetTitle className="text-right">ملخص الحفلة</SheetTitle></SheetHeader><div className="p-4"><Summary active={active} selected={selectedItems} total={total} remove={pick}/></div></SheetContent></Sheet>
-<Dialogs eventOpen={eventOpen} setEventOpen={setEventOpen} eventForm={eventForm} setEventForm={setEventForm} saveEvent={saveEvent} catOpen={catOpen} setCatOpen={setCatOpen} catName={catName} setCatName={setCatName} saveCat={saveCat} itemOpen={itemOpen} setItemOpen={setItemOpen} itemForm={itemForm} setItemForm={setItemForm} file={file} setFile={setFile} saveItem={saveItem}/></main>}
-function Nav({icon,text,active=false}:{icon:React.ReactNode;text:string;active?:boolean}){return <button className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold ${active?"bg-white text-[#173d32]":"text-white/70"}`}>{icon}{text}</button>}function Stat({n,label}:{n:number;label:string}){return <div className="rounded-xl border bg-white px-4 py-2 text-center"><b className="block text-lg">{n}</b><small className="text-[#78857f]">{label}</small></div>}
-function Summary({active,selected,total,remove}:{active:Ev|null;selected:{selection:Sel;item:Item}[];total:number;remove:(i:Item)=>void}){if(!active)return <div className="grid min-h-[60vh] place-items-center text-center"><div><CircleUserRound className="mx-auto mb-3 size-12 text-[#a8b4af]"/><h3 className="font-black">اختر حفلة</h3><p className="mt-1 text-sm text-[#78857f]">اضغط على اسم زبون لعرض معلوماته وتجهيزاته.</p></div></div>;return <div id="print-order"><div className="mb-5 border-b pb-5"><p className="text-xs font-bold tracking-[.25em] text-[#ad7a23]">بيت الفرح</p><h2 className="mt-1 text-2xl font-black">{active.customerName}</h2><span className="mt-2 inline-block rounded-full bg-[#e8f1ed] px-3 py-1 text-sm font-bold">{active.eventType}</span></div><Info icon={<Phone/>} label="التلفون" value={[active.phone1,active.phone2].filter(Boolean).join(" · ")}/><Info icon={<MapPin/>} label="المنطقة" value={active.area}/><Info icon={<CalendarDays/>} label="التاريخ" value={active.eventDate||"غير محدد"}/>{active.notes&&<Info icon={<Sparkles/>} label="ملاحظات" value={active.notes}/>}<div className="my-5 border-t pt-5"><div className="mb-3 flex items-center justify-between"><h3 className="font-black">التجهيزات المختارة</h3><span className="rounded-full bg-[#173d32] px-2.5 py-1 text-xs text-white">{selected.length}</span></div>{selected.length?selected.map(({selection,item})=><div key={selection.id} className="mb-2 flex items-center gap-3 rounded-xl border p-2"><div className="size-12 overflow-hidden rounded-lg bg-[#e8efeb]">{item.imageUrl?<img src={item.imageUrl} alt="" className="h-full w-full object-cover"/>:<PackagePlus className="m-3 opacity-30"/>}</div><div className="min-w-0 flex-1"><b className="block truncate text-sm">{item.name}</b><small className="text-[#78857f]">{item.description||"بدون ملاحظات"}</small></div><div className="text-left"><b className="block text-sm">{item.price!=null?`${item.price} ₪`:"-"}</b><button className="no-print mt-1 text-[#b13c3c]" onClick={()=>remove(item)} aria-label="حذف"><Trash2 className="size-4"/></button></div></div>):<p className="rounded-xl border border-dashed p-4 text-center text-sm text-[#78857f]">لم تُضف تجهيزات بعد</p>}</div><div className="flex items-center justify-between border-y py-4"><b>المجموع التقريبي</b><strong className="text-xl">{total} ₪</strong></div><Button onClick={()=>window.print()} className="no-print mt-5 h-12 w-full bg-[#173d32]"><Download/>تنزيل PDF</Button></div>}
-function Info({icon,label,value}:{icon:React.ReactNode;label:string;value:string}){return <div className="mb-3 flex gap-3"><span className="mt-1 text-[#779087] [&>svg]:size-4">{icon}</span><div><small className="block text-[#78857f]">{label}</small><b className="text-sm">{value}</b></div></div>}
-function CatIcon({icon}:{icon:string}){return icon==="chair"?<Armchair className="size-4"/>:icon==="table"?<TableProperties className="size-4"/>:icon==="arch"?<TentTree className="size-4"/>:<Sparkles className="size-4"/>}
-function Row({title,items,selected,pick,premium=false}:{title:string;items:Item[];selected:number[];pick:(i:Item)=>void;premium?:boolean}){return <section>{title&&<h3 className="mb-3 font-black">{title}</h3>}<div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">{items.map(i=><article key={i.id} onClick={()=>pick(i)} className={`min-w-[205px] cursor-pointer overflow-hidden rounded-xl border bg-white ${selected.includes(i.id)?"ring-2 ring-[#173d32]":""}`}><div className={`relative grid h-28 place-items-center overflow-hidden ${premium?"bg-[#d7b563]":"bg-[#e4ece8]"}`}>{i.imageUrl?<img src={i.imageUrl} alt={i.name} className="h-full w-full object-cover"/>:<PackagePlus className="size-9 opacity-30"/>}{selected.includes(i.id)&&<span className="absolute left-2 top-2 rounded-full bg-[#173d32] px-2 py-1 text-xs text-white">مُضاف</span>}</div><div className="p-3"><b className="block truncate">{i.name}</b><small className="mt-1 block truncate text-[#78857f]">{i.description}</small><div className="mt-2 flex justify-between"><span>{i.price!=null?`${i.price} ₪`:""}</span><Plus className="size-4"/></div></div></article>)}</div></section>}
-function Field({label,children}:{label:string;children:React.ReactNode}){return <div className="space-y-2"><Label>{label}</Label>{children}</div>}
-function Dialogs(p:any){return <><Dialog open={p.eventOpen} onOpenChange={p.setEventOpen}><DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"><DialogHeader className="text-right"><DialogTitle>كرت حفلة جديد</DialogTitle><DialogDescription>معلومات الزبون والحفلة</DialogDescription></DialogHeader><form onSubmit={p.saveEvent} className="grid gap-4 sm:grid-cols-2"><Field label="نوع الحفلة"><select className="h-10 w-full rounded-md border px-3" value={p.eventForm.eventType} onChange={(e:any)=>p.setEventForm({...p.eventForm,eventType:e.target.value})}>{["عرس","حنّة","حفلة توجيهي","عيد ميلاد","حفلة أخرى"].map(x=><option key={x}>{x}</option>)}</select></Field>{[["اسم الزبون","customerName"],["رقم التلفون الأول","phone1"],["رقم التلفون الثاني","phone2"],["منطقة الحفلة","area"]].map(([l,k],n)=><Field key={k} label={l}><Input required={n===0||n===1||n===3} value={p.eventForm[k]} onChange={(e:any)=>p.setEventForm({...p.eventForm,[k]:e.target.value})}/></Field>)}<Field label="تاريخ الحفلة"><Input type="date" value={p.eventForm.eventDate} onChange={(e:any)=>p.setEventForm({...p.eventForm,eventDate:e.target.value})}/></Field><div className="sm:col-span-2"><Field label="ملاحظات"><Textarea value={p.eventForm.notes} onChange={(e:any)=>p.setEventForm({...p.eventForm,notes:e.target.value})}/></Field></div><Button className="h-12 bg-[#173d32] sm:col-span-2">حفظ الكرت</Button></form></DialogContent></Dialog><Dialog open={p.catOpen} onOpenChange={p.setCatOpen}><DialogContent dir="rtl"><DialogHeader className="text-right"><DialogTitle>قسم جديد</DialogTitle><DialogDescription>أضف نوع تجهيز جديد للكتالوج</DialogDescription></DialogHeader><form onSubmit={p.saveCat} className="space-y-4"><Input required value={p.catName} onChange={(e:any)=>p.setCatName(e.target.value)} placeholder="اسم القسم"/><Button className="w-full bg-[#173d32]">إضافة</Button></form></DialogContent></Dialog><Dialog open={p.itemOpen} onOpenChange={p.setItemOpen}><DialogContent dir="rtl"><DialogHeader className="text-right"><DialogTitle>قطعة جديدة</DialogTitle><DialogDescription>صورة ومعلومات التجهيز</DialogDescription></DialogHeader><form onSubmit={p.saveItem} className="space-y-3"><label className="flex h-28 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed"><Camera/><b>{p.file?p.file.name:"اختر صورة"}</b><input type="file" accept="image/*" className="hidden" onChange={(e:any)=>p.setFile(e.target.files?.[0]||null)}/></label><Input required value={p.itemForm.name} onChange={(e:any)=>p.setItemForm({...p.itemForm,name:e.target.value})} placeholder="اسم القطعة"/><Textarea value={p.itemForm.description} onChange={(e:any)=>p.setItemForm({...p.itemForm,description:e.target.value})} placeholder="تعليق بسيط"/><Input type="number" min="0" value={p.itemForm.price} onChange={(e:any)=>p.setItemForm({...p.itemForm,price:e.target.value})} placeholder="السعر"/><label className="flex items-center justify-between rounded-xl border p-3"><span className="flex gap-2"><Crown className="text-[#ad7a23]"/>Premium</span><input type="checkbox" checked={p.itemForm.isPremium} onChange={(e:any)=>p.setItemForm({...p.itemForm,isPremium:e.target.checked})}/></label><Button className="w-full bg-[#173d32]">حفظ</Button></form></DialogContent></Dialog></>}
+  const app=useRef<HTMLDivElement>(null);
+  const [parties,setParties]=useState<Party[]>([]);
+  const [categories,setCategories]=useState<Category[]>(defaultCategories);
+  const [products,setProducts]=useState<Product[]>(defaultProducts);
+  const [picks,setPicks]=useState<Pick[]>([]);
+  const [activeParty,setActiveParty]=useState<Party|null>(null);
+  const [activeCategory,setActiveCategory]=useState(1);
+  const [search,setSearch]=useState("");
+  const [modal,setModal]=useState<Modal>(null);
+  const [mobileOrder,setMobileOrder]=useState(false);
+  const [ready,setReady]=useState(false);
+  const [partyForm,setPartyForm]=useState({eventType:"عرس",customerName:"",phone1:"",phone2:"",area:"",eventDate:"",notes:""});
+  const [productForm,setProductForm]=useState({name:"",description:"",price:"",isPremium:false});
+  const [categoryName,setCategoryName]=useState("");
+  const [file,setFile]=useState<File|null>(null);
+
+  useEffect(()=>{
+    try{
+      const data=JSON.parse(localStorage.getItem("beit-alfarah-data")||"{}");
+      if(data.events)setParties(data.events);
+      if(data.categories?.length){setCategories(data.categories.map((c:Category,i:number)=>({...c,id:c.id<0?i+1:c.id})));setActiveCategory(data.categories[0].id<0?1:data.categories[0].id)}
+      if(data.items?.length)setProducts(data.items.map((p:Product,i:number)=>({...p,id:p.id<0?i+11:p.id,categoryId:p.categoryId<0?Math.abs(p.categoryId):p.categoryId})));
+      if(data.selections)setPicks(data.selections);
+    }catch{}
+    setReady(true);
+  },[]);
+  useEffect(()=>{if(ready)localStorage.setItem("beit-alfarah-data",JSON.stringify({events:parties,categories,items:products,selections:picks}))},[ready,parties,categories,products,picks]);
+  useEffect(()=>{
+    if(!app.current)return;
+    const ctx=gsap.context(()=>{
+      gsap.from(".js-nav",{x:35,opacity:0,duration:.7,ease:"power3.out"});
+      gsap.from(".js-enter",{y:24,opacity:0,duration:.75,stagger:.1,ease:"power3.out"});
+      gsap.from(".js-order",{x:-30,opacity:0,duration:.75,delay:.25,ease:"power3.out"});
+    },app);
+    return()=>ctx.revert();
+  },[]);
+  useEffect(()=>{
+    gsap.fromTo(".product-card",{opacity:0,y:16,scale:.985},{opacity:1,y:0,scale:1,duration:.4,stagger:.05,ease:"power2.out",overwrite:true});
+  },[activeCategory,search]);
+
+  const partyPicks=useMemo(()=>activeParty?picks.filter(p=>p.eventId===activeParty.id):[],[activeParty,picks]);
+  const selected=useMemo(()=>partyPicks.map(pick=>({pick,product:products.find(p=>p.id===pick.itemId)})).filter(x=>x.product) as {pick:Pick;product:Product}[],[partyPicks,products]);
+  const total=selected.reduce((n,x)=>n+(x.product.price||0)*x.pick.quantity,0);
+  const filtered=products.filter(p=>p.categoryId===activeCategory&&p.name.toLowerCase().includes(search.toLowerCase()));
+
+  function saveParty(e:FormEvent){
+    e.preventDefault();
+    const party={...partyForm,id:Date.now()};
+    setParties(v=>[party,...v]);setActiveParty(party);setModal(null);
+    setPartyForm({eventType:"عرس",customerName:"",phone1:"",phone2:"",area:"",eventDate:"",notes:""});
+    toast.success("تم إنشاء كرت الحفلة");
+  }
+  function saveCategory(e:FormEvent){
+    e.preventDefault();if(!categoryName.trim())return;
+    const category={id:Date.now(),name:categoryName.trim(),icon:"sparkles"};
+    setCategories(v=>[...v,category]);setActiveCategory(category.id);setCategoryName("");setModal(null);
+  }
+  function saveProduct(e:FormEvent){
+    e.preventDefault();
+    const commit=(imageUrl?:string)=>{
+      const product={id:Date.now(),categoryId:activeCategory,name:productForm.name.trim(),description:productForm.description.trim(),price:productForm.price?Number(productForm.price):null,isPremium:productForm.isPremium,imageUrl};
+      setProducts(v=>[product,...v]);setProductForm({name:"",description:"",price:"",isPremium:false});setFile(null);setModal(null);toast.success("تمت إضافة القطعة");
+    };
+    if(file){const reader=new FileReader();reader.onload=()=>commit(String(reader.result));reader.readAsDataURL(file)}else commit();
+  }
+  function toggleProduct(product:Product){
+    if(!activeParty){toast.info("اختر حفلة أو أنشئ كرتًا جديدًا أولاً");return}
+    const found=partyPicks.find(p=>p.itemId===product.id);
+    if(found)setPicks(v=>v.filter(p=>p.id!==found.id));
+    else{setPicks(v=>[...v,{id:Date.now(),eventId:activeParty.id,itemId:product.id,quantity:1}]);toast.success("أضيفت إلى الطلب")}
+  }
+
+  return <div ref={app} className="app-shell" dir="rtl">
+    <Toaster position="top-center" richColors/>
+    <aside className="nav-rail js-nav">
+      <div className="logo"><span><PartyPopper/></span><div><b>بيت الفرح</b><small>EVENT STUDIO</small></div></div>
+      <nav>
+        <button className="active"><LayoutDashboard/><span>الرئيسية</span></button>
+        <button><CalendarDays/><span>الحفلات</span><em>{parties.length}</em></button>
+        <button><LayoutGrid/><span>الكتالوج</span></button>
+      </nav>
+      <div className="rail-parties">
+        <div className="rail-label"><span>آخر الحفلات</span><button onClick={()=>setModal("party")}><Plus/></button></div>
+        {parties.slice(0,5).map(p=><button key={p.id} onClick={()=>setActiveParty(p)} className={activeParty?.id===p.id?"active":""}>
+          <i>{p.customerName.charAt(0)}</i><span><b>{p.customerName}</b><small>{p.eventType} · {p.area}</small></span>
+        </button>)}
+        {!parties.length&&<p>ابدأ بإنشاء أول كرت حفلة</p>}
+      </div>
+      <div className="rail-bottom"><Crown/><div><small>بيت الفرح</small><b>نصنع لحظات لا تُنسى</b></div></div>
+    </aside>
+
+    <div className="main-area">
+      <header className="mobile-header">
+        <button><Menu/></button><div className="logo compact"><span><PartyPopper/></span><b>بيت الفرح</b></div>
+        <button className="mobile-add" onClick={()=>setModal("party")}><Plus/></button>
+      </header>
+      <main>
+        <section className="page-head js-enter">
+          <div><span className="overline">DASHBOARD / كتالوج المناسبات</span><h1>صباح الفرح <Sparkles/></h1><p>جهّز مناسبتك، رتّب اختياراتك، وشارك العرض مع الزبون.</p></div>
+          <button className="new-party" onClick={()=>setModal("party")}><span><Plus/></span><div><small>إضافة جديدة</small><b>فتح كرت حفلة</b></div><ChevronLeft/></button>
+        </section>
+
+        <section className="spotlight js-enter">
+          <div className="spot-copy"><span>BEIT ALFARAH COLLECTION</span><h2>تفاصيل صغيرة.<br/><em>فرحة كبيرة.</em></h2><p>كتالوج واحد يجمع كل ما تحتاجه حفلتك من أول كرسي لآخر لمسة.</p></div>
+          <div className="metrics"><Metric value={parties.length} label="حفلة"/><Metric value={products.length} label="قطعة"/><Metric value={selected.length} label="مختارة"/></div>
+          <div className="spot-art"><div className="ring one"/><div className="ring two"/><Sparkles/></div>
+        </section>
+
+        <section className="catalog js-enter">
+          <div className="catalog-toolbar">
+            <div><span className="overline">CATALOG</span><h3>اختر التجهيزات</h3></div>
+            <div className="tools">
+              <label className="search-box"><Search/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="ابحث في الكتالوج"/></label>
+              <button onClick={()=>setModal("category")}><LayoutGrid/><span>قسم</span></button>
+              <button className="add-product" onClick={()=>setModal("product")}><Camera/><span>قطعة جديدة</span></button>
+            </div>
+          </div>
+          <div className="category-tabs">{categories.map(c=><button key={c.id} onClick={()=>setActiveCategory(c.id)} className={activeCategory===c.id?"active":""}><CategoryIcon name={c.icon}/><span>{c.name}</span></button>)}</div>
+          <ProductRow products={filtered.filter(p=>!p.isPremium)} picks={partyPicks} toggle={toggleProduct}/>
+          <div className="premium-block">
+            <div className="premium-title"><div><Crown/><span><small>EXCLUSIVE</small><b>Premium Collection</b></span></div><p>تفاصيل مختارة للمناسبات الاستثنائية</p></div>
+            <ProductRow products={filtered.filter(p=>p.isPremium)} picks={partyPicks} toggle={toggleProduct} premium/>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <aside className="order-panel js-order"><Order party={activeParty} selected={selected} total={total} remove={toggleProduct}/></aside>
+    <button className="order-fab" onClick={()=>setMobileOrder(true)}><span><small>ملخص الحفلة</small><b>{activeParty?.customerName||"اختر حفلة"}</b></span><em>{selected.length}</em></button>
+    {mobileOrder&&<div className="sheet-layer" onMouseDown={()=>setMobileOrder(false)}><div className="mobile-sheet" onMouseDown={e=>e.stopPropagation()}><button className="close" onClick={()=>setMobileOrder(false)}><X/></button><Order party={activeParty} selected={selected} total={total} remove={toggleProduct}/></div></div>}
+    {modal&&<EditorModal modal={modal} close={()=>setModal(null)} partyForm={partyForm} setPartyForm={setPartyForm} saveParty={saveParty} categoryName={categoryName} setCategoryName={setCategoryName} saveCategory={saveCategory} productForm={productForm} setProductForm={setProductForm} file={file} setFile={setFile} saveProduct={saveProduct}/>}
+  </div>
+}
+
+function Metric({value,label}:{value:number;label:string}){return <div><b>{String(value).padStart(2,"0")}</b><span>{label}</span></div>}
+function CategoryIcon({name}:{name:string}){return name==="chair"?<Armchair/>:name==="table"?<TableProperties/>:name==="arch"?<TentTree/>:<Sparkles/>}
+function ProductRow({products,picks,toggle,premium=false}:{products:Product[];picks:Pick[];toggle:(p:Product)=>void;premium?:boolean}){
+  if(!products.length)return <div className="empty-row"><PackagePlus/><span>{premium?"أضف أول قطعة Premium":"لا توجد قطع في هذا القسم بعد"}</span></div>;
+  return <div className="product-row">{products.map(p=>{const picked=picks.some(x=>x.itemId===p.id);return <article key={p.id} className={"product-card "+(premium?"premium ":"")+(picked?"selected":"")} onClick={()=>toggle(p)}>
+    <div className="product-image">{p.imageUrl?<img src={p.imageUrl} alt={p.name}/>:<div className="placeholder"><Sparkles/><small>BEIT ALFARAH</small></div>}{premium&&<span className="tag premium-tag"><Crown/> PREMIUM</span>}{picked&&<span className="tag picked-tag"><Check/> تمت الإضافة</span>}</div>
+    <div className="product-info"><h4>{p.name}</h4><p>{p.description||"تفاصيل مميزة تناسب حفلتك"}</p><div><strong>{p.price!==null?p.price+" ₪":"حسب الطلب"}</strong><span><Plus/></span></div></div>
+  </article>})}</div>
+}
+function Order({party,selected,total,remove}:{party:Party|null;selected:{pick:Pick;product:Product}[];total:number;remove:(p:Product)=>void}){
+  if(!party)return <div className="order-empty"><div><PartyPopper/></div><span>ORDER SUMMARY</span><h3>الحفلة تبدأ من هنا</h3><p>اختر حفلة من القائمة، ثم أضف القطع التي أعجبت الزبون.</p></div>;
+  return <div id="print-order" className="order-content">
+    <div className="order-top"><span>ORDER SUMMARY</span><Sparkles/></div>
+    <div className="client"><i>{party.customerName.charAt(0)}</i><div><small>{party.eventType}</small><h3>{party.customerName}</h3></div></div>
+    <div className="client-data"><Data icon={<Phone/>} label="الهاتف" value={[party.phone1,party.phone2].filter(Boolean).join(" · ")}/><Data icon={<MapPin/>} label="الموقع" value={party.area}/><Data icon={<CalendarDays/>} label="الموعد" value={party.eventDate||"غير محدد"}/></div>
+    <div className="line-title"><b>التجهيزات</b><span>{selected.length}</span></div>
+    <div className="order-items">{selected.map(({pick,product})=><div className="order-item" key={pick.id}><div className="thumb">{product.imageUrl?<img src={product.imageUrl} alt=""/>:<Sparkles/>}</div><div><b>{product.name}</b><small>{product.description||"بدون ملاحظات"}</small></div><strong>{product.price!==null?product.price+" ₪":"—"}</strong><button className="no-print" onClick={()=>remove(product)}><Trash2/></button></div>)}{!selected.length&&<div className="no-items">لم تُضف تجهيزات بعد</div>}</div>
+    {party.notes&&<div className="note"><Sparkles/><span><small>ملاحظات</small><b>{party.notes}</b></span></div>}
+    <div className="order-total"><span>المجموع التقريبي</span><b>{total} ₪</b></div>
+    <button className="pdf no-print" onClick={()=>window.print()}><Download/>تنزيل العرض PDF</button>
+  </div>
+}
+function Data({icon,label,value}:{icon:ReactNode;label:string;value:string}){return <div><span>{icon}</span><p><small>{label}</small><b>{value}</b></p></div>}
+function Field({label,children}:{label:string;children:ReactNode}){return <label className="field"><span>{label}</span>{children}</label>}
+function EditorModal(p:any){return <div className="modal-layer" onMouseDown={p.close}><div className="editor" onMouseDown={e=>e.stopPropagation()}><button className="close" onClick={p.close}><X/></button>
+  {p.modal==="party"&&<><ModalHead icon={<CalendarDays/>} kicker="NEW EVENT" title="فتح كرت حفلة"/><form className="form-grid" onSubmit={p.saveParty}><Field label="نوع الحفلة"><select value={p.partyForm.eventType} onChange={(e:any)=>p.setPartyForm({...p.partyForm,eventType:e.target.value})}>{["عرس","حنّة","حفلة توجيهي","عيد ميلاد","حفلة أخرى"].map(x=><option key={x}>{x}</option>)}</select></Field>{[["اسم الزبون","customerName"],["رقم الهاتف الأول","phone1"],["رقم الهاتف الثاني","phone2"],["منطقة الحفلة","area"]].map(([label,key],i)=><Field key={key} label={label}><input required={i===0||i===1||i===3} value={p.partyForm[key]} onChange={(e:any)=>p.setPartyForm({...p.partyForm,[key]:e.target.value})}/></Field>)}<Field label="تاريخ الحفلة"><input type="date" value={p.partyForm.eventDate} onChange={(e:any)=>p.setPartyForm({...p.partyForm,eventDate:e.target.value})}/></Field><Field label="ملاحظات"><textarea value={p.partyForm.notes} onChange={(e:any)=>p.setPartyForm({...p.partyForm,notes:e.target.value})}/></Field><button className="submit">حفظ وفتح الكتالوج <ChevronLeft/></button></form></>}
+  {p.modal==="category"&&<><ModalHead icon={<LayoutGrid/>} kicker="NEW CATEGORY" title="إضافة قسم"/><form onSubmit={p.saveCategory}><Field label="اسم القسم"><input required value={p.categoryName} onChange={(e:any)=>p.setCategoryName(e.target.value)} placeholder="مثال: إضاءة"/></Field><button className="submit">إضافة القسم <ChevronLeft/></button></form></>}
+  {p.modal==="product"&&<><ModalHead icon={<Camera/>} kicker="NEW ITEM" title="قطعة جديدة"/><form onSubmit={p.saveProduct}><label className="upload"><Camera/><b>{p.file?p.file.name:"اضغط لإضافة صورة"}</b><small>JPG أو PNG</small><input hidden type="file" accept="image/*" onChange={(e:any)=>p.setFile(e.target.files?.[0]||null)}/></label><Field label="اسم القطعة"><input required value={p.productForm.name} onChange={(e:any)=>p.setProductForm({...p.productForm,name:e.target.value})}/></Field><Field label="وصف مختصر"><textarea value={p.productForm.description} onChange={(e:any)=>p.setProductForm({...p.productForm,description:e.target.value})}/></Field><Field label="السعر"><input type="number" min="0" value={p.productForm.price} onChange={(e:any)=>p.setProductForm({...p.productForm,price:e.target.value})}/></Field><label className="premium-switch"><span><Crown/> إضافة إلى Premium</span><input type="checkbox" checked={p.productForm.isPremium} onChange={(e:any)=>p.setProductForm({...p.productForm,isPremium:e.target.checked})}/></label><button className="submit">حفظ القطعة <ChevronLeft/></button></form></>}
+  </div></div>}
+function ModalHead({icon,kicker,title}:{icon:ReactNode;kicker:string;title:string}){return <div className="modal-head"><span>{icon}</span><div><small>{kicker}</small><h2>{title}</h2></div></div>}
