@@ -9,3 +9,12 @@
 @media(max-width:480px){.page-head .overline{font-size:6px}.spotlight{height:275px}.spot-copy p{max-width:250px;line-height:1.7}.metrics>div{padding:12px}.category-tabs button{padding:0 11px}.product-card{min-width:165px;width:165px}.premium-block{padding:13px}.editor{padding:21px 15px}}
 @media print{body *{visibility:hidden!important}#print-order,#print-order *{visibility:visible!important}#print-order{position:absolute;inset:0;width:100%;background:#fff;color:#14211e;padding:30px;direction:rtl}.no-print{display:none!important}@page{size:A4;margin:12mm}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Fixed desktop grid: keep RTL inside panels without reversing CSS Grid tracks */
+html,body{max-width:100%;overflow-x:hidden}
+.app-shell{width:100%;direction:ltr!important;grid-template-areas:"nav main order"!important}
+.app-shell>*{direction:rtl}
+.nav-rail{grid-area:nav}
+.main-area{grid-area:main;width:100%;min-width:0;overflow:hidden}
+.order-panel{grid-area:order}
+@media(max-width:900px){.app-shell{display:block!important}}
