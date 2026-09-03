@@ -1,0 +1,2 @@
+import {getDb} from "@/db";import {categories} from "@/db/schema";
+export async function POST(r:Request){try{const{name}=await r.json() as {name?:string};if(!name?.trim())return Response.json({error:"اكتب اسم القسم"},{status:400});const[category]=await getDb().insert(categories).values({name:name.trim()}).returning();return Response.json({category},{status:201})}catch{return Response.json({error:"تعذر إضافة القسم"},{status:500})}}
